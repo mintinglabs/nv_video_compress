@@ -47,18 +47,49 @@ class _MyHomePageState extends State<MyHomePage> {
     if (file == null) {
       return;
     }
-    await VideoCompress.setLogLevel(0);
+    var beginTime = DateTime.now();
+    print("文件之前的大小");
+    final fileSize = Platform.isMacOS
+        ? (file as XFile).readAsBytes()
+        : (file as File).readAsBytes();
+    fileSize.then((value) => print(value.length));
+
+    await VideoCompress.setLogLevel(3);
     final info = await VideoCompress.compressVideo(
       file.path,
       quality: VideoQuality.MediumQuality,
       deleteOrigin: false,
       includeAudio: true,
     );
-    print(info!.path);
-    setState(() {
-      _counter = info.path!;
-    });
+
+    var endTime = DateTime.now();
+    var difference = endTime.difference(beginTime);
+    print('压缩耗时(毫秒)');
+    print(difference.inMilliseconds);
+    if (info != null) {
+      print(info.path);
+      print('压缩后的大小');
+      print(info.file?.readAsBytesSync().length);
+      setState(() {
+        _counter = info.path!;
+      });
+    }
   }
+
+  // Subscription? _subscription;
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   _subscription = VideoCompress.compressProgress$.subscribe((progress) {
+  //     debugPrint('progress: $progress');
+  //   });
+  // }
+
+  // @override
+  // void dispose() {
+  //   super.dispose();
+  //   _subscription?.unsubscribe();
+  // }
 
   @override
   Widget build(BuildContext context) {
