@@ -24,6 +24,10 @@ class CompressMixin {
 
   Future<void> _progressCallback(MethodCall call) async {
     switch (call.method) {
+      case 'log':
+        debugPrint(
+            "video_compress[${DateTime.now()}]:${call.arguments.toString()}");
+        break;
       case 'updateProgress':
         final progress = double.tryParse(call.arguments.toString());
         if (progress != null) compressProgress$.next(progress);

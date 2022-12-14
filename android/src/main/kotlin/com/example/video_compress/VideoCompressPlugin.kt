@@ -2,6 +2,8 @@ package com.example.video_compress
 
 import android.content.Context
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import com.otaliastudios.transcoder.Transcoder
 import com.otaliastudios.transcoder.TranscoderListener
@@ -138,18 +140,25 @@ class VideoCompressPlugin : MethodCallHandler, FlutterPlugin {
                     RemoveTrackStrategy()
                 }
 
-                val dataSource = if (startTime != null || duration != null){
-                    val source = UriDataSource(context, Uri.parse(path))
-                    TrimDataSource(source, (1000 * 1000 * (startTime ?: 0)).toLong(), (1000 * 1000 * (duration ?: 0)).toLong())
-                }else{
-                    UriDataSource(context, Uri.parse(path))
-                }
+                // com.otaliastudios:transcoder:0.9.1->DefaultDataSource line 25:
+                // private MediaExtractor mExtractor = new MediaExtractor();
+                // may spend 3 second to create
+                // using Thread to new UriDataSource
+                Thread {
+                    val dataSource = if (startTime != null || duration != null) {
+                        val source = UriDataSource(context, Uri.parse(path))
+                        TrimDataSource(source, (1000 * 1000 * (startTime
+                                ?: 0)).toLong(), (1000 * 1000 * (duration ?: 0)).toLong())
+                    } else {
+                        UriDataSource(context, Uri.parse(path))
+                    }
 
-
-                transcodeFuture = Transcoder.into(destPath!!)
+                    transcodeFuture = Transcoder.into(destPath!!)
                         .addDataSource(dataSource)
                         .setAudioTrackStrategy(audioTrackStrategy)
                         .setVideoTrackStrategy(videoTrackStrategy)
+                        //feed main thread for listener to handle channel.invokeMethod
+                        .setListenerHandler(Handler(Looper.getMainLooper()))
                         .setListener(object : TranscoderListener {
                             override fun onTranscodeProgress(progress: Double) {
                                 channel.invokeMethod("updateProgress", progress * 100.00)
@@ -169,9 +178,11 @@ class VideoCompressPlugin : MethodCallHandler, FlutterPlugin {
                             }
 
                             override fun onTranscodeFailed(exception: Throwable) {
+                                channel.invokeMethod("log", "exception:$exception")
                                 result.success(null)
                             }
                         }).transcode()
+                }.start()
             }
             else -> {
                 result.notImplemented()

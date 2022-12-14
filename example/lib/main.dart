@@ -47,14 +47,8 @@ class _MyHomePageState extends State<MyHomePage> {
     if (file == null) {
       return;
     }
-    var beginTime = DateTime.now();
-    print("文件之前的大小");
-    final fileSize = Platform.isMacOS
-        ? (file as XFile).readAsBytes()
-        : (file as File).readAsBytes();
-    fileSize.then((value) => print(value.length));
-
     await VideoCompress.setLogLevel(3);
+    var beginTime = DateTime.now();
     final info = await VideoCompress.compressVideo(
       file.path,
       quality: VideoQuality.MediumQuality,
@@ -64,12 +58,19 @@ class _MyHomePageState extends State<MyHomePage> {
 
     var endTime = DateTime.now();
     var difference = endTime.difference(beginTime);
+
     print('压缩耗时(毫秒)');
     print(difference.inMilliseconds);
     if (info != null) {
-      print(info.path);
+      final fileSize = Platform.isMacOS
+          ? (file as XFile).readAsBytes()
+          : (file as File).readAsBytes();
+      print("文件之前的大小");
+      print((await fileSize).length);
       print('压缩后的大小');
       print(info.file?.readAsBytesSync().length);
+      print('压缩后的路径');
+      print(info.path);
       setState(() {
         _counter = info.path!;
       });
@@ -109,13 +110,14 @@ class _MyHomePageState extends State<MyHomePage> {
               style: Theme.of(context).textTheme.headline4,
             ),
             InkWell(
-                child: Icon(
-                  Icons.cancel,
-                  size: 55,
-                ),
-                onTap: () {
-                  VideoCompress.cancelCompression();
-                }),
+              child: Icon(
+                Icons.cancel,
+                size: 55,
+              ),
+              onTap: () {
+                VideoCompress.cancelCompression();
+              },
+            ),
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
