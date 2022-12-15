@@ -87,7 +87,7 @@ class VideoCompressPlugin : MethodCallHandler, FlutterPlugin {
                 val frameRate = if (call.argument<Int>("frameRate")==null) 30 else call.argument<Int>("frameRate")
 
                 val tempDir: String = context.getExternalFilesDir("video_compress")!!.absolutePath
-                val out = SimpleDateFormat("yyyy-MM-dd hh-mm-ss").format(Date())
+                val out = System .currentTimeMillis().toString();
                 val destPath: String = tempDir + File.separator + "VID_" + out + path.hashCode() + ".mp4"
 
                 var videoTrackStrategy: TrackStrategy = DefaultVideoStrategy.atMost(340).build();
@@ -96,21 +96,20 @@ class VideoCompressPlugin : MethodCallHandler, FlutterPlugin {
                 when (quality) {
 
                     0 -> {
-                      videoTrackStrategy = DefaultVideoStrategy.atMost(720).build()
+                        videoTrackStrategy = DefaultVideoStrategy.atMost(480).bitRate(700000.toLong()).frameRate(frameRate!!).build()
                     }
 
                     1 -> {
-                        videoTrackStrategy = DefaultVideoStrategy.atMost(360).build()
+                        videoTrackStrategy = DefaultVideoStrategy.atMost(480).bitRate(700000.toLong()).frameRate(frameRate!!).build()
                     }
                     2 -> {
-                        videoTrackStrategy = DefaultVideoStrategy.atMost(640).build()
+                        videoTrackStrategy = DefaultVideoStrategy.atMost(720).bitRate(1600000.toLong()).frameRate(frameRate!!).build()
                     }
                     3 -> {
-
                         assert(value = frameRate != null)
-                        videoTrackStrategy = DefaultVideoStrategy.Builder()
-                                .keyFrameInterval(3f)
-                                .bitRate(1280 * 720 * 4.toLong())
+                        videoTrackStrategy = DefaultVideoStrategy
+                                .atMost(1080)
+                                .bitRate(5000000.toLong())
                                 .frameRate(frameRate!!) // will be capped to the input frameRate
                                 .build()
                     }
@@ -147,12 +146,10 @@ class VideoCompressPlugin : MethodCallHandler, FlutterPlugin {
                 Thread {
                     val dataSource = if (startTime != null || duration != null) {
                         val source = UriDataSource(context, Uri.parse(path))
-                        TrimDataSource(source, (1000 * 1000 * (startTime
-                                ?: 0)).toLong(), (1000 * 1000 * (duration ?: 0)).toLong())
+                        TrimDataSource(source, (1000 * 1000 * (startTime ?: 0)).toLong(), (1000 * 1000 * (duration ?: 0)).toLong())
                     } else {
                         UriDataSource(context, Uri.parse(path))
                     }
-
                     transcodeFuture = Transcoder.into(destPath!!)
                         .addDataSource(dataSource)
                         .setAudioTrackStrategy(audioTrackStrategy)
